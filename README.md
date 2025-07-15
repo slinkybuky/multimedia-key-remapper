@@ -4,4 +4,4 @@ Remaps the Linux default keys to correspond with the chromebook layout. This is 
 # How to use
 Copy and paste these commands in a terminal window and reboot!
 
-cd ~/Downloads; sudo apt-get -y install curl; curl -LOk https://github.com/SlinkyBuky/chromebook-key-remap-for-linux/archive/main.tar.gz; tar -zxvf main.tar.gz; cd CBFixesAndTweaks-master; sudo -E bash CBFixesAndTweaks.sh
+cd ~/Downloads; sudo apt-get -y install curl; curl -LOk https://github.com/SlinkyBuky/chromebook-key-remap-for-linux/archive/main.tar.gz; tar -zxvf main.tar.gz; cd chrome-key-remap-for-linux; sudo -E bash chrome-key-remap-for-linux.sh
