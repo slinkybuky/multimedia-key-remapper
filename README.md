@@ -1,7 +1,9 @@
 # How to install
 
-simply run this command in your terminal: ```curl -fsSL https://raw.githubusercontent.com/slinkybuky/multimedia-key-remapper/main/multimedia-key-remapper.sh | bash```
-
+simply run this command in your terminal:
+```bash
+curl -fsSL https://raw.githubusercontent.com/slinkybuky/multimedia-key-remapper/main/multimedia-key-remapper.sh | bash
+```
 # multimedia-key-remapper
 
 this script is built to solve the issue all Chromebook Linux users have: the top row multimedia keys don't work on Linux how they do on ChromeOS! this script installs keyd and generates a keyd config to remap the top row keys to their multimedia functions while making them still send the function key values when the meta layer is enabled.
