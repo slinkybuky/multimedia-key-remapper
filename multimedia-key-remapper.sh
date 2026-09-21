@@ -3,7 +3,13 @@ set -e
 CONFIG_FILE="/etc/keyd/multimedia.conf"
 
 if [ "$EUID" -ne 0 ]; then
-    exec sudo bash "$0" "$@"
+    if [ -t 0 ]; then
+        exec sudo bash "$0" "$@"
+    else
+        script_file=$(mktemp)
+        cat > "$script_file"
+        exec sudo bash "$script_file" "$@"
+    fi
 fi
 
 if command -v keyd >/dev/null 2>&1; then
