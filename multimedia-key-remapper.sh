@@ -12,6 +12,12 @@ if [ "$EUID" -ne 0 ]; then
     fi
 fi
 
+if [ -t 0 ]; then
+    INPUT="/dev/stdin"
+else
+    INPUT="/dev/tty"
+fi
+
 if command -v keyd >/dev/null 2>&1; then
     echo "keyd is already installed."
 else
@@ -48,7 +54,7 @@ echo "  2) All keyboards"
 echo
 
 while true; do
-    read -rp "Choose [1/2]: " choice
+    read -rp "Choose [1/2]: " choice <"$INPUT"
 
     case "$choice" in
         1)
@@ -107,7 +113,7 @@ if [ "$choice" = "1" ]; then
         echo "  ID: $DETECTED_ID"
         echo
 
-        read -rp "Use this keyboard? [Y/n]: " use_detected
+        read -rp "Use this keyboard? [Y/n]: " use_detected <"$INPUT"
 
         if [[ ! "$use_detected" =~ ^[Nn]$ ]]; then
             DEVICE_ID="$DETECTED_ID"
@@ -129,7 +135,7 @@ if [ "$choice" = "1" ]; then
         echo
 
         while true; do
-            read -rp "Which one is the built-in keyboard? [1-${#CHROMEBOOK_KEYBOARDS[@]}]: " keyboard_choice
+            read -rp "Which one is the built-in keyboard? [1-${#CHROMEBOOK_KEYBOARDS[@]}]: " keyboard_choice <"$INPUT"
 
             if [[ "$keyboard_choice" =~ ^[0-9]+$ ]] &&
                [ "$keyboard_choice" -ge 1 ] &&
@@ -172,7 +178,7 @@ if [ "$choice" = "1" ]; then
             echo
 
             while true; do
-                read -rp "Choose [1-$SHOW_ALL_INDEX]: " keyboard_choice
+                read -rp "Choose [1-$SHOW_ALL_INDEX]: " keyboard_choice <"$INPUT"
 
                 if [[ "$keyboard_choice" =~ ^[0-9]+$ ]] &&
                    [ "$keyboard_choice" -ge 1 ] &&
@@ -203,7 +209,8 @@ if [ "$choice" = "1" ]; then
             if [ "${#KEYBOARDS[@]}" -eq 0 ]; then
                 echo "Couldn't find any input devices."
                 echo
-                read -rp "Enter the keyboard ID manually: " DEVICE_ID
+
+                read -rp "Enter the keyboard ID manually: " DEVICE_ID <"$INPUT"
 
                 if [ -z "$DEVICE_ID" ]; then
                     echo "No device ID entered."
@@ -221,7 +228,7 @@ if [ "$choice" = "1" ]; then
                 echo
 
                 while true; do
-                    read -rp "Which device is the built-in keyboard? [1-${#KEYBOARDS[@]}]: " keyboard_choice
+                    read -rp "Which device is the built-in keyboard? [1-${#KEYBOARDS[@]}]: " keyboard_choice <"$INPUT"
 
                     if [[ "$keyboard_choice" =~ ^[0-9]+$ ]] &&
                        [ "$keyboard_choice" -ge 1 ] &&
@@ -255,8 +262,6 @@ echo "  F9  = Volume Down"
 echo "  F10 = Volume Up"
 echo
 
-read -rp "Use these defaults? [Y/n]: " customize
-
 F1="back"
 F2="forward"
 F3="refresh"
@@ -268,40 +273,42 @@ F8="mute"
 F9="volumedown"
 F10="volumeup"
 
+read -rp "Use these defaults? [Y/n]: " customize <"$INPUT"
+
 if [[ "$customize" =~ ^[Nn]$ ]]; then
     echo
     echo "Enter a keyd binding for each key."
     echo "Press Enter to keep the default."
     echo
 
-    read -rp "F1 [$F1]: " value
+    read -rp "F1 [$F1]: " value <"$INPUT"
     [ -n "$value" ] && F1="$value"
 
-    read -rp "F2 [$F2]: " value
+    read -rp "F2 [$F2]: " value <"$INPUT"
     [ -n "$value" ] && F2="$value"
 
-    read -rp "F3 [$F3]: " value
+    read -rp "F3 [$F3]: " value <"$INPUT"
     [ -n "$value" ] && F3="$value"
 
-    read -rp "F4 [$F4]: " value
+    read -rp "F4 [$F4]: " value <"$INPUT"
     [ -n "$value" ] && F4="$value"
 
-    read -rp "F5 [$F5]: " value
+    read -rp "F5 [$F5]: " value <"$INPUT"
     [ -n "$value" ] && F5="$value"
 
-    read -rp "F6 [$F6]: " value
+    read -rp "F6 [$F6]: " value <"$INPUT"
     [ -n "$value" ] && F6="$value"
 
-    read -rp "F7 [$F7]: " value
+    read -rp "F7 [$F7]: " value <"$INPUT"
     [ -n "$value" ] && F7="$value"
 
-    read -rp "F8 [$F8]: " value
+    read -rp "F8 [$F8]: " value <"$INPUT"
     [ -n "$value" ] && F8="$value"
 
-    read -rp "F9 [$F9]: " value
+    read -rp "F9 [$F9]: " value <"$INPUT"
     [ -n "$value" ] && F9="$value"
 
-    read -rp "F10 [$F10]: " value
+    read -rp "F10 [$F10]: " value <"$INPUT"
     [ -n "$value" ] && F10="$value"
 fi
 
