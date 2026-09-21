@@ -1,21 +1,23 @@
 set -e
 
-CONFIG_FILE="/etc/keyd/multimedia.conf"
+config_file="/etc/keyd/multimedia.conf"
 
 if [ "$EUID" -ne 0 ]; then
     if [ -t 0 ]; then
         exec sudo bash "$0" "$@"
-    else
-        script_file=$(mktemp)
-        cat > "$script_file"
-        exec sudo bash "$script_file" "$@"
     fi
+
+    script_file=$(mktemp)
+    cat > "$script_file"
+    chmod +x "$script_file"
+
+    exec sudo bash "$script_file" "$@"
 fi
 
 if [ -t 0 ]; then
-    INPUT="/dev/stdin"
+    input="/dev/stdin"
 else
-    INPUT="/dev/tty"
+    input="/dev/tty"
 fi
 
 if command -v keyd >/dev/null 2>&1; then
@@ -54,15 +56,15 @@ echo "  2) All keyboards"
 echo
 
 while true; do
-    read -rp "Choose [1/2]: " choice <"$INPUT"
+    read -rp "Choose [1/2]: " choice <"$input"
 
     case "$choice" in
         1)
-            DEVICE_ID=""
+            device_id=""
             break
             ;;
         2)
-            DEVICE_ID="*"
+            device_id="*"
             break
             ;;
         *)
@@ -75,58 +77,59 @@ if [ "$choice" = "1" ]; then
     echo
     echo "Looking for keyboards..."
 
-    DEVICE_LIST=$(mktemp)
+    device_list=$(mktemp)
 
     cleanup() {
-        rm -f "$DEVICE_LIST"
+        rm -f "$device_list"
     }
 
     trap cleanup EXIT
 
-    stdbuf -oL keyd monitor >"$DEVICE_LIST" 2>&1 &
-    MONITOR_PID=$!
+    stdbuf -oL keyd monitor >"$device_list" 2>&1 &
+    monitor_pid=$!
 
     sleep 1
 
-    kill -KILL "$MONITOR_PID" >/dev/null 2>&1 || true
-    wait "$MONITOR_PID" >/dev/null 2>&1 || true
+    kill -KILL "$monitor_pid" >/dev/null 2>&1 || true
+    wait "$monitor_pid" >/dev/null 2>&1 || true
 
-    mapfile -t DEVICES < <(
-        sed -n 's/^device added: \([^ ]*\) \(.*\) (\/dev\/input\/.*)$/\1|\2/p' "$DEVICE_LIST" |
+    mapfile -t devices < <(
+        sed -n 's/^device added: \([^ ]*\) \(.*\) (\/dev\/input\/.*)$/\1|\2/p' "$device_list" |
         sort -u
     )
 
-    mapfile -t CHROMEBOOK_KEYBOARDS < <(
-        printf '%s\n' "${DEVICES[@]}" |
+    mapfile -t chromebook_keyboards < <(
+        printf '%s\n' "${devices[@]}" |
         grep -Ei '\|.*(at translated set 2 keyboard|at-translated-set-2-keyboard|chromebook.*keyboard|chromeos.*keyboard|keyboard.*chromebook|keyboard.*chromeos)' |
         sort -u
     )
 
-    if [ "${#CHROMEBOOK_KEYBOARDS[@]}" -eq 1 ]; then
-        DETECTED_ID="${CHROMEBOOK_KEYBOARDS[0]%%|*}"
-        DETECTED_NAME="${CHROMEBOOK_KEYBOARDS[0]#*|}"
+    if [ "${#chromebook_keyboards[@]}" -eq 1 ]; then
+        detected_id="${chromebook_keyboards[0]%%|*}"
+        detected_name="${chromebook_keyboards[0]#*|}"
 
         echo
         echo "Found a likely built-in Chromebook keyboard:"
         echo
-        echo "  $DETECTED_NAME"
-        echo "  ID: $DETECTED_ID"
+        echo "  $detected_name"
+        echo "  ID: $detected_id"
         echo
 
-        read -rp "Use this keyboard? [Y/n]: " use_detected <"$INPUT"
+        read -rp "Use this keyboard? [Y/n]: " use_detected <"$input"
 
         if [[ ! "$use_detected" =~ ^[Nn]$ ]]; then
-            DEVICE_ID="$DETECTED_ID"
-            DEVICE_NAME="$DETECTED_NAME"
+            device_id="$detected_id"
+            device_name="$detected_name"
         fi
-    elif [ "${#CHROMEBOOK_KEYBOARDS[@]}" -gt 1 ]; then
+
+    elif [ "${#chromebook_keyboards[@]}" -gt 1 ]; then
         echo
         echo "Found multiple likely built-in Chromebook keyboards:"
         echo
 
-        for i in "${!CHROMEBOOK_KEYBOARDS[@]}"; do
-            id="${CHROMEBOOK_KEYBOARDS[$i]%%|*}"
-            name="${CHROMEBOOK_KEYBOARDS[$i]#*|}"
+        for i in "${!chromebook_keyboards[@]}"; do
+            id="${chromebook_keyboards[$i]%%|*}"
+            name="${chromebook_keyboards[$i]#*|}"
 
             echo "  $((i + 1))) $name"
             echo "     $id"
@@ -135,15 +138,15 @@ if [ "$choice" = "1" ]; then
         echo
 
         while true; do
-            read -rp "Which one is the built-in keyboard? [1-${#CHROMEBOOK_KEYBOARDS[@]}]: " keyboard_choice <"$INPUT"
+            read -rp "Which one is the built-in keyboard? [1-${#chromebook_keyboards[@]}]: " keyboard_choice <"$input"
 
             if [[ "$keyboard_choice" =~ ^[0-9]+$ ]] &&
                [ "$keyboard_choice" -ge 1 ] &&
-               [ "$keyboard_choice" -le "${#CHROMEBOOK_KEYBOARDS[@]}" ]; then
+               [ "$keyboard_choice" -le "${#chromebook_keyboards[@]}" ]; then
 
-                selected="${CHROMEBOOK_KEYBOARDS[$((keyboard_choice - 1))]}"
-                DEVICE_ID="${selected%%|*}"
-                DEVICE_NAME="${selected#*|}"
+                selected="${chromebook_keyboards[$((keyboard_choice - 1))]}"
+                device_id="${selected%%|*}"
+                device_name="${selected#*|}"
                 break
             fi
 
@@ -151,52 +154,53 @@ if [ "$choice" = "1" ]; then
         done
     fi
 
-    if [ -z "${DEVICE_ID:-}" ]; then
-        mapfile -t KEYBOARDS < <(
-            printf '%s\n' "${DEVICES[@]}" |
+    if [ -z "$device_id" ]; then
+        mapfile -t keyboards < <(
+            printf '%s\n' "${devices[@]}" |
             grep -Ei '\|.*keyboard' |
             sort -u
         )
 
-        if [ "${#KEYBOARDS[@]}" -gt 0 ]; then
+        if [ "${#keyboards[@]}" -gt 0 ]; then
             echo
             echo "Keyboard devices found:"
             echo
 
-            for i in "${!KEYBOARDS[@]}"; do
-                id="${KEYBOARDS[$i]%%|*}"
-                name="${KEYBOARDS[$i]#*|}"
+            for i in "${!keyboards[@]}"; do
+                id="${keyboards[$i]%%|*}"
+                name="${keyboards[$i]#*|}"
 
                 echo "  $((i + 1))) $name"
                 echo "     $id"
             done
 
-            SHOW_ALL_INDEX=$((${#KEYBOARDS[@]} + 1))
+            show_all_index=$((${#keyboards[@]} + 1))
 
             echo
-            echo "  $SHOW_ALL_INDEX) Show all detected devices"
+            echo "  $show_all_index) Show all detected devices"
             echo
 
             while true; do
-                read -rp "Choose [1-$SHOW_ALL_INDEX]: " keyboard_choice <"$INPUT"
+                read -rp "Choose [1-$show_all_index]: " keyboard_choice <"$input"
 
                 if [[ "$keyboard_choice" =~ ^[0-9]+$ ]] &&
                    [ "$keyboard_choice" -ge 1 ] &&
-                   [ "$keyboard_choice" -le "$SHOW_ALL_INDEX" ]; then
+                   [ "$keyboard_choice" -le "$show_all_index" ]; then
 
-                    if [ "$keyboard_choice" -eq "$SHOW_ALL_INDEX" ]; then
-                        KEYBOARDS=("${DEVICES[@]}")
+                    if [ "$keyboard_choice" -eq "$show_all_index" ]; then
+                        keyboards=("${devices[@]}")
                         break
                     fi
 
-                    selected="${KEYBOARDS[$((keyboard_choice - 1))]}"
-                    DEVICE_ID="${selected%%|*}"
-                    DEVICE_NAME="${selected#*|}"
+                    selected="${keyboards[$((keyboard_choice - 1))]}"
+                    device_id="${selected%%|*}"
+                    device_name="${selected#*|}"
                     break
                 fi
 
                 echo "Please choose one of the listed numbers."
             done
+
         else
             echo
             echo "No devices with 'keyboard' in their name were found."
@@ -204,22 +208,22 @@ if [ "$choice" = "1" ]; then
             echo "All detected devices:"
             echo
 
-            KEYBOARDS=("${DEVICES[@]}")
+            keyboards=("${devices[@]}")
 
-            if [ "${#KEYBOARDS[@]}" -eq 0 ]; then
+            if [ "${#keyboards[@]}" -eq 0 ]; then
                 echo "Couldn't find any input devices."
                 echo
 
-                read -rp "Enter the keyboard ID manually: " DEVICE_ID <"$INPUT"
+                read -rp "Enter the keyboard ID manually: " device_id <"$input"
 
-                if [ -z "$DEVICE_ID" ]; then
+                if [ -z "$device_id" ]; then
                     echo "No device ID entered."
                     exit 1
                 fi
             else
-                for i in "${!KEYBOARDS[@]}"; do
-                    id="${KEYBOARDS[$i]%%|*}"
-                    name="${KEYBOARDS[$i]#*|}"
+                for i in "${!keyboards[@]}"; do
+                    id="${keyboards[$i]%%|*}"
+                    name="${keyboards[$i]#*|}"
 
                     echo "  $((i + 1))) $name"
                     echo "     $id"
@@ -228,15 +232,15 @@ if [ "$choice" = "1" ]; then
                 echo
 
                 while true; do
-                    read -rp "Which device is the built-in keyboard? [1-${#KEYBOARDS[@]}]: " keyboard_choice <"$INPUT"
+                    read -rp "Which device is the built-in keyboard? [1-${#keyboards[@]}]: " keyboard_choice <"$input"
 
                     if [[ "$keyboard_choice" =~ ^[0-9]+$ ]] &&
                        [ "$keyboard_choice" -ge 1 ] &&
-                       [ "$keyboard_choice" -le "${#KEYBOARDS[@]}" ]; then
+                       [ "$keyboard_choice" -le "${#keyboards[@]}" ]; then
 
-                        selected="${KEYBOARDS[$((keyboard_choice - 1))]}"
-                        DEVICE_ID="${selected%%|*}"
-                        DEVICE_NAME="${selected#*|}"
+                        selected="${keyboards[$((keyboard_choice - 1))]}"
+                        device_id="${selected%%|*}"
+                        device_name="${selected#*|}"
                         break
                     fi
 
@@ -273,7 +277,7 @@ F8="mute"
 F9="volumedown"
 F10="volumeup"
 
-read -rp "Use these defaults? [Y/n]: " customize <"$INPUT"
+read -rp "Use these defaults? [Y/n]: " customize <"$input"
 
 if [[ "$customize" =~ ^[Nn]$ ]]; then
     echo
@@ -281,43 +285,43 @@ if [[ "$customize" =~ ^[Nn]$ ]]; then
     echo "Press Enter to keep the default."
     echo
 
-    read -rp "F1 [$F1]: " value <"$INPUT"
+    read -rp "F1 [$F1]: " value <"$input"
     [ -n "$value" ] && F1="$value"
 
-    read -rp "F2 [$F2]: " value <"$INPUT"
+    read -rp "F2 [$F2]: " value <"$input"
     [ -n "$value" ] && F2="$value"
 
-    read -rp "F3 [$F3]: " value <"$INPUT"
+    read -rp "F3 [$F3]: " value <"$input"
     [ -n "$value" ] && F3="$value"
 
-    read -rp "F4 [$F4]: " value <"$INPUT"
+    read -rp "F4 [$F4]: " value <"$input"
     [ -n "$value" ] && F4="$value"
 
-    read -rp "F5 [$F5]: " value <"$INPUT"
+    read -rp "F5 [$F5]: " value <"$input"
     [ -n "$value" ] && F5="$value"
 
-    read -rp "F6 [$F6]: " value <"$INPUT"
+    read -rp "F6 [$F6]: " value <"$input"
     [ -n "$value" ] && F6="$value"
 
-    read -rp "F7 [$F7]: " value <"$INPUT"
+    read -rp "F7 [$F7]: " value <"$input"
     [ -n "$value" ] && F7="$value"
 
-    read -rp "F8 [$F8]: " value <"$INPUT"
+    read -rp "F8 [$F8]: " value <"$input"
     [ -n "$value" ] && F8="$value"
 
-    read -rp "F9 [$F9]: " value <"$INPUT"
+    read -rp "F9 [$F9]: " value <"$input"
     [ -n "$value" ] && F9="$value"
 
-    read -rp "F10 [$F10]: " value <"$INPUT"
+    read -rp "F10 [$F10]: " value <"$input"
     [ -n "$value" ] && F10="$value"
 fi
 
 mkdir -p /etc/keyd
 
-cat > "$CONFIG_FILE" <<EOF
+cat > /etc/keyd/multimedia.conf <<EOF
 [ids]
 
-$DEVICE_ID
+$device_id
 
 [main]
 
@@ -349,11 +353,11 @@ EOF
 echo
 echo "Checking configuration..."
 
-if ! keyd check "$CONFIG_FILE"; then
+if ! keyd check /etc/keyd/multimedia.conf; then
     echo
     echo "The config failed validation."
-    echo "Removing $CONFIG_FILE."
-    rm -f "$CONFIG_FILE"
+    echo "Removing /etc/keyd/multimedia.conf."
+    rm -f /etc/keyd/multimedia.conf
     exit 1
 fi
 
@@ -363,9 +367,9 @@ echo
 echo "Done."
 echo
 echo "Config:"
-echo "  $CONFIG_FILE"
+echo "  /etc/keyd/multimedia.conf"
 echo
 echo "Device:"
-echo "  $DEVICE_ID"
+echo "  $device_id"
 echo
 echo "keyd is enabled and running."
