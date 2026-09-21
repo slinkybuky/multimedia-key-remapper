@@ -1,7 +1,5 @@
 set -e
 
-config_file="/etc/keyd/multimedia.conf"
-
 if [ "$EUID" -ne 0 ]; then
     if [ -t 0 ]; then
         exec sudo bash "$0" "$@"
